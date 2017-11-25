@@ -5,7 +5,7 @@ class Enemy {
     /**
      * Enemy构造函数
      * @constructor
-     * @param {number} y - enemy起始位置的y坐标，默认值随机取1，2，3中的一个
+     * @param {number} y - enemy起始位置的y坐标，默认值为随机取1，2，3中的一个
      */
     constructor(y = Math.floor(Math.random() * 3) + 1) {
         /**
@@ -14,10 +14,11 @@ class Enemy {
          */
         this.sprite = 'images/enemy-bug.png';
         /**
-         * enemy初始位置的x坐标，范围从-1到-5的随机整数
+         * enemy初始位置的x坐标，范围从-1到-10的随机整数
+         * 扩大enemy的间隔，分散enemy的分布
          * @type {number}
          */
-        this.x = -1 * (1 + Math.floor(Math.random() * 5));
+        this.x = -1 * (1 + Math.floor(Math.random() * 10));
         /**
          * enemy初始位置的y坐标，1，2，3
          * @type {number}
@@ -33,11 +34,13 @@ class Enemy {
     /**
      * enemy实例方法，更新enemy位置坐标
      * @param {number} dt - 时间间隙
+     * @param {number} maxX - x方向的右边界
      */
-    update(dt) {
+    update(dt, maxX) {
         this.x += dt * this.speed;
-        if (this.x > 5) {
-            this.x = -1;
+        if (this.x > maxX) {
+            // 提高enemy分布的随机程度
+            this.x = -1 * (1 + Math.floor(Math.random() * 10));
         }
     }
 
@@ -50,17 +53,21 @@ class Enemy {
 
     /**
      * enemy实例方法，碰撞检测
-     * 碰撞判定方法：player的左上角落入enemy矩形框内，或player的右下角落入enemy矩形框内
      * @param {Player} player - player实例
-     * @param {number} d - 修正碰撞判定区域因子，[0,1)
+     * @param {number} d - 碰撞判定区域修正因子
+     * @param {number} maxX - player右边界
+     * @param {number} maxY - player下边界
      */
-    checkCollision(player, d) {
+    checkCollision(player, d, maxX, maxY) {
+        // 修正因子：从0（满格判定）到1（消除判定）的浮点数，消除素材对玩家视觉的影响
+        // 碰撞判别一：player的起点落入enemy矩形框内，说明player的左边或上边有碰撞
         let isLeftIn = ((this.x + d <= player.x && player.x < this.x + 1 - d) && (this.y <= player.y && player.y < this.y + 1));
+        // 碰撞判别二：enemy的起点落入player矩形框内，说明player的右边或下边有碰撞
         let isRightIn = ((player.x + d <= this.x && this.x < player.x + 1 - d) && (player.y <= this.y && this.y < player.y + 1));
         if (isLeftIn || isRightIn) {
-            player.reset();
-        } else {
-            // console.log('false');
+            // 满足任意一个判别条件都说明存在碰撞，游戏失败
+            // player.reset(maxX, maxY);
+            player.status = 'dead';
         }
     }
 }
@@ -69,7 +76,12 @@ class Enemy {
  * Player类
  */
 class Player {
-    constructor() {
+    /**
+     * Player构造函数
+     * @constructor
+     * @param {number} maxY - 底部边界
+     */
+    constructor(maxY = 5) {
         /**
          * player图片文件，相对地址
          * @type {string}
@@ -84,7 +96,7 @@ class Player {
          * player初始位置的y坐标
          * @type {number}
          */
-        this.y = 5;
+        this.y = maxY;
         /**
          * player的x位移
          * @type {number}
@@ -92,32 +104,40 @@ class Player {
         this.dx = 0;
         /**
          * player的y位移
-         * #type {number}
+         * @type {number}
          */
         this.dy = 0;
+        /**
+         * player的状态: 'alive'存活，'win'胜利，'dead'失败
+         * @type {string}
+         */
+        this.status = 'alive';
     }
 
     /**
      * player实例方法，更新player位置坐标
-     * @param {number} dx - x坐标的位移
-     * @param {number} dy - y坐标的位移
+     * @param {number} minX,minY,maxX,maxY - player活动范围边界
      */
-    update(dx, dy) {
+    update(...rect) {
         this.x += this.dx;
-        if (this.x < 0) {
-            this.x = 0;
+        // 左边边界
+        if (this.x < rect[0]) {
+            this.x = rect[0];
         }
-        if (this.x > 4) {
-            this.x = 4;
+        // 右边边界
+        if (this.x > rect[2]) {
+            this.x = rect[2];
         }
         this.dx = 0;
         this.y += this.dy;
-        if (this.y > 5) {
-            this.y = 5;
+        // 下边边界
+        if (this.y > rect[3]) {
+            this.y = rect[3];
         }
-        if (this.y === 0) {
-            console.info('you win!');
-            this.reset();
+        // 上边边界，玩家到达终点
+        if (this.y === rect[1]) {
+            this.status = 'win';
+            // this.reset(rect[2], rect[3]);
         }
         this.dy = 0;
     }
@@ -127,21 +147,23 @@ class Player {
      * @param {string} dir - 移动方向
      */
     handleInput(dir) {
-        switch (dir) {
-            case 'left':
-                this.dx = -1;
-                break;
-            case 'up':
-                this.dy = -1;
-                break;
-            case 'right':
-                this.dx = 1;
-                break;
-            case 'down':
-                this.dy = 1;
-                break;
-            default:
-                break;
+        if (player.status === 'alive') {
+            switch (dir) {
+                case 'left':
+                    this.dx = -1;
+                    break;
+                case 'up':
+                    this.dy = -1;
+                    break;
+                case 'right':
+                    this.dx = 1;
+                    break;
+                case 'down':
+                    this.dy = 1;
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -153,16 +175,18 @@ class Player {
     }
 
     /**
-     * player实例方法，player返回初始位置
+     * player实例方法，把player放回起点
+     * @param {number} maxX - player右边边界
+     * @param {number} maxY - player底边边界
      */
-    reset() {
-        this.x = Math.floor(Math.random() * 5);
-        this.y = 5;
+    reset(maxX, maxY) {
+        this.x = Math.floor(Math.random() * (maxX + 1));
+        this.y = maxY;
     }
 }
 
 const allEnemies = [];
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < 9; i++) {
     let enemy;
     if (i < 3) {
         //保证每行石头上至少有一只虫子
@@ -186,6 +210,11 @@ document.addEventListener('keyup', function(e) {
         39: 'right',
         40: 'down'
     };
+    // 回车键删除游戏结果弹框并恢复player
+    if (e.key === 'Enter' && player.status !== 'alive') {
+        player.status = 'alive';
+        player.reset(4, 5);
+    }
 
     player.handleInput(allowedKeys[e.keyCode]);
 });

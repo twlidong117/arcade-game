@@ -74,17 +74,18 @@ var Engine = (function(global) {
      */
     function updateEntities(dt) {
         allEnemies.forEach(function(enemy) {
-            enemy.update(dt);
+            enemy.update(dt, 5);
         });
-        player.update();
+        player.update(0, 0, 4, 5);
     }
 
     /**
-     * 碰撞检测
+     * 碰撞检测，调用每个enemy对象的 checkCollision 方法，检测是否与 player 对象碰撞
+     * @param {number} d - 碰撞检测修正因子
      */
-    function checkCollisions() {
+    function checkCollisions(d = 0.1) {
         allEnemies.forEach(function(enemy) {
-            enemy.checkCollision(player, 0.3);
+            enemy.checkCollision(player, d, 4, 5);
         });
     }
 
@@ -119,6 +120,9 @@ var Engine = (function(global) {
         }
 
         renderEntities();
+        if (player.status !== 'alive') {
+            showResult(player.status);
+        }
     }
 
     /* 这个函数会在每个时间间隙被 render 函数调用。他的目的是分别调用你在 enemy 和 player
@@ -157,4 +161,24 @@ var Engine = (function(global) {
      * 对象。从而开发者就可以在他们的app.js文件里面更容易的使用它。
      */
     global.ctx = ctx;
+
+    /**
+     * 显示游戏结果
+     * @param {string} res - player.status属性，'win'|'dead'
+     */
+    function showResult(res) {
+        ctx.strokeStyle = "#000";
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.strokeRect(canvas.width / 2 - 150, canvas.height / 2 - 100, 300, 200);
+        ctx.fillRect(canvas.width / 2 - 150, canvas.height / 2 - 100, 300, 200);
+        ctx.textAlign = "center";
+        ctx.font = "36pt sans-serif";
+        if (res === 'win') {
+            ctx.fillStyle = "#00ffff";
+            ctx.fillText('You win!', canvas.width / 2, canvas.height / 2);
+        } else if (res === 'dead') {
+            ctx.fillStyle = "#ff0000";
+            ctx.fillText('You lose!', canvas.width / 2, canvas.height / 2);
+        }
+    }
 })(this);
