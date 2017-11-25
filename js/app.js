@@ -1,61 +1,33 @@
-// // 这是我们的玩家要躲避的敌人 
-// var Enemy = function() {
-//     // 要应用到每个敌人的实例的变量写在这里
-//     // 我们已经提供了一个来帮助你实现更多
-
-//     // 敌人的图片或者雪碧图，用一个我们提供的工具函数来轻松的加载文件
-//     this.sprite = 'images/enemy-bug.png';
-// };
-
-// // 此为游戏必须的函数，用来更新敌人的位置
-// // 参数: dt ，表示时间间隙
-// Enemy.prototype.update = function(dt) {
-//     // 你应该给每一次的移动都乘以 dt 参数，以此来保证游戏在所有的电脑上
-//     // 都是以同样的速度运行的
-// };
-
-// // 此为游戏必须的函数，用来在屏幕上画出敌人，
-// Enemy.prototype.render = function() {
-//     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-// };
-
-// // 现在实现你自己的玩家类
-// // 这个类需要一个 update() 函数， render() 函数和一个 handleInput()函数
-
-
-// // 现在实例化你的所有对象
-// // 把所有敌人的对象都放进一个叫 allEnemies 的数组里面
-// // 把玩家对象放进一个叫 player 的变量里面
-
-
-
-// --------ES 6----------
-
 /**
  * Enemy类
  */
 class Enemy {
-    constructor() {
+    /**
+     * Enemy构造函数
+     * @constructor
+     * @param {number} y - enemy起始位置的y坐标，默认值随机取1，2，3中的一个
+     */
+    constructor(y = Math.floor(Math.random() * 3) + 1) {
         /**
          * enemy图像文件，相对地址
          * @type {string}
          */
         this.sprite = 'images/enemy-bug.png';
         /**
-         * enemy初始位置的x坐标，界面左边第一列
+         * enemy初始位置的x坐标，范围从-1到-5的随机整数
          * @type {number}
          */
-        this.x = -1;
+        this.x = -1 * (1 + Math.floor(Math.random() * 5));
         /**
-         * enemy初始位置的y坐标，位于石头上
+         * enemy初始位置的y坐标，1，2，3
          * @type {number}
          */
-        this.y = 1 + Math.floor(Math.random() * 3);
+        this.y = y;
         /**
-         * enemy的移动速度,[0,2)
+         * enemy的移动速度，范围从1(最慢)到3(最快)的随机浮点数
          * @type {number}
          */
-        this.speed = Math.random() * 2;
+        this.speed = Math.random() * 2 + 1;
     }
 
     /**
@@ -73,7 +45,23 @@ class Enemy {
      * enemy实例方法，绘制enemy
      */
     render() {
-        ctx.drawImage(Resources.get(this.sprite), this.x * 101, this.y * 83);
+        ctx.drawImage(Resources.get(this.sprite), this.x * 101, this.y * 83 - 22);
+    }
+
+    /**
+     * enemy实例方法，碰撞检测
+     * 碰撞判定方法：player的左上角落入enemy矩形框内，或player的右下角落入enemy矩形框内
+     * @param {Player} player - player实例
+     * @param {number} d - 修正碰撞判定区域因子，[0,1)
+     */
+    checkCollision(player, d) {
+        let isLeftIn = ((this.x + d <= player.x && player.x < this.x + 1 - d) && (this.y <= player.y && player.y < this.y + 1));
+        let isRightIn = ((player.x + d <= this.x && this.x < player.x + 1 - d) && (player.y <= this.y && this.y < player.y + 1));
+        if (isLeftIn || isRightIn) {
+            player.reset();
+        } else {
+            // console.log('false');
+        }
     }
 }
 
@@ -128,6 +116,7 @@ class Player {
             this.y = 5;
         }
         if (this.y === 0) {
+            console.info('you win!');
             this.reset();
         }
         this.dy = 0;
@@ -164,7 +153,7 @@ class Player {
     }
 
     /**
-     * player实例方法，player成功过河，返回初始位置
+     * player实例方法，player返回初始位置
      */
     reset() {
         this.x = Math.floor(Math.random() * 5);
@@ -173,8 +162,16 @@ class Player {
 }
 
 const allEnemies = [];
-for (let i = 0; i < 3; i++) {
-    let enemy = new Enemy();
+for (let i = 0; i < 6; i++) {
+    let enemy;
+    if (i < 3) {
+        //保证每行石头上至少有一只虫子
+        enemy = new Enemy(i + 1);
+    } else {
+        //多余的虫子，可用于调节难度
+        enemy = new Enemy();
+    }
+
     allEnemies.push(enemy);
 }
 const player = new Player();
