@@ -11,7 +11,7 @@
  */
 
 var Engine = (function(global) {
-    /* 实现定义我们会在这个作用于用到的变量
+    /* 实现定义我们会在这个作用域用到的变量
      * 创建 canvas 元素，拿到对应的 2D 上下文
      * 设置 canvas 元素的高/宽 然后添加到dom中
      */
@@ -85,7 +85,10 @@ var Engine = (function(global) {
      */
     function checkCollisions(d = 0.1) {
         allEnemies.forEach(function(enemy) {
-            enemy.checkCollision(player, d, 4, 5);
+            enemy.checkCollision(player, d);
+        });
+        allGems.forEach(function(gem) {
+            gem.checkCollision(player);
         });
     }
 
@@ -121,7 +124,7 @@ var Engine = (function(global) {
 
         renderEntities();
         if (player.status !== 'alive') {
-            showResult(player.status);
+            showResult();
         }
     }
 
@@ -129,6 +132,9 @@ var Engine = (function(global) {
      * 对象中定义的 render 方法。
      */
     function renderEntities() {
+        allGems.forEach(function(gem) {
+            gem.render();
+        });
         /* 遍历在 allEnemies 数组中存放的作于对象然后调用你事先定义的 render 函数 */
         allEnemies.forEach(function(enemy) {
             enemy.render();
@@ -153,7 +159,10 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        'images/char-boy.png',
+        'images/Gem Blue.png',
+        'images/Gem Green.png',
+        'images/Gem Orange.png'
     ]);
     Resources.onReady(init);
 
@@ -164,21 +173,22 @@ var Engine = (function(global) {
 
     /**
      * 显示游戏结果
-     * @param {string} res - player.status属性，'win'|'dead'
      */
-    function showResult(res) {
+    function showResult() {
         ctx.strokeStyle = "#000";
         ctx.fillStyle = "rgba(255,255,255,0.75)";
         ctx.strokeRect(canvas.width / 2 - 150, canvas.height / 2 - 100, 300, 200);
         ctx.fillRect(canvas.width / 2 - 150, canvas.height / 2 - 100, 300, 200);
         ctx.textAlign = "center";
         ctx.font = "36pt sans-serif";
-        if (res === 'win') {
-            ctx.fillStyle = "#00ffff";
+        if (player.status === 'win') {
+            ctx.fillStyle = "#2C97B1";
             ctx.fillText('You win!', canvas.width / 2, canvas.height / 2);
-        } else if (res === 'dead') {
-            ctx.fillStyle = "#ff0000";
+        } else if (player.status === 'dead') {
+            ctx.fillStyle = "#C71717";
             ctx.fillText('You lose!', canvas.width / 2, canvas.height / 2);
         }
+        ctx.font = "18pt sans-serif";
+        ctx.fillText('Score: ' + player.score, canvas.width / 2, canvas.height / 2 + 60);
     }
 })(this);

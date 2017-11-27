@@ -1,29 +1,50 @@
 /**
+ * Item类
+ * 物体基类
+ */
+class Item {
+    /**
+     * Item构造函数
+     * @constructor
+     * @param {string} fp - 图像文件的相对地址 
+     * @param {number} x - 初始位置的x坐标
+     * @param {number} y - 初始位置的y坐标
+     */
+    constructor(fp, x, y) {
+        this.sprite = fp;
+        this.x = x;
+        this.y = y;
+    }
+
+    /**
+     * 更新实例的状态，需要子类实现
+     */
+    update() {
+        throw Error('Item的实例方法update()未实现');
+    }
+
+    /**
+     * 渲染到canvas
+     * @param {number} d - y坐标修正因子
+     */
+    render(d = 0) {
+        ctx.drawImage(Resources.get(this.sprite), this.x * 101, this.y * 83 - d);
+    }
+}
+
+/**
  * Enemy类
  */
-class Enemy {
+class Enemy extends Item {
     /**
      * Enemy构造函数
      * @constructor
+     * @param {string} fp - 图像文件的相对位置
      * @param {number} y - enemy起始位置的y坐标，默认值为随机取1，2，3中的一个
      */
-    constructor(y = Math.floor(Math.random() * 3) + 1) {
-        /**
-         * enemy图像文件，相对地址
-         * @type {string}
-         */
-        this.sprite = 'images/enemy-bug.png';
-        /**
-         * enemy初始位置的x坐标，范围从-1到-10的随机整数
-         * 扩大enemy的间隔，分散enemy的分布
-         * @type {number}
-         */
-        this.x = -1 * (1 + Math.floor(Math.random() * 10));
-        /**
-         * enemy初始位置的y坐标，1，2，3
-         * @type {number}
-         */
-        this.y = y;
+    constructor(fp = 'images/enemy-bug.png', y = Math.floor(Math.random() * 3) + 1) {
+        let x = -1 * (1 + Math.floor(Math.random() * 10));
+        super(fp, x, y);
         /**
          * enemy的移动速度，范围从1(最慢)到3(最快)的随机浮点数
          * @type {number}
@@ -48,17 +69,15 @@ class Enemy {
      * enemy实例方法，绘制enemy
      */
     render() {
-        ctx.drawImage(Resources.get(this.sprite), this.x * 101, this.y * 83 - 22);
+        super.render(22);
     }
 
     /**
      * enemy实例方法，碰撞检测
      * @param {Player} player - player实例
      * @param {number} d - 碰撞判定区域修正因子
-     * @param {number} maxX - player右边界
-     * @param {number} maxY - player下边界
      */
-    checkCollision(player, d, maxX, maxY) {
+    checkCollision(player, d) {
         // 修正因子：从0（满格判定）到1（消除判定）的浮点数，消除素材对玩家视觉的影响
         // 碰撞判别一：player的起点落入enemy矩形框内，说明player的左边或上边有碰撞
         let isLeftIn = ((this.x + d <= player.x && player.x < this.x + 1 - d) && (this.y <= player.y && player.y < this.y + 1));
@@ -70,33 +89,30 @@ class Enemy {
             player.status = 'dead';
         }
     }
+
+    /**
+     * enemy实例方法，重置enemy位置
+     */
+    reset() {
+        this.x = -1 * (1 + Math.floor(Math.random() * 10));
+        this.speed = Math.random() * 2 + 1;
+    }
 }
 
 /**
  * Player类
  */
-class Player {
+class Player extends Item {
     /**
      * Player构造函数
      * @constructor
      * @param {number} maxY - 底部边界
      */
     constructor(maxY = 5) {
-        /**
-         * player图片文件，相对地址
-         * @type {string}
-         */
-        this.sprite = 'images/char-boy.png';
-        /**
-         * player初始位置的x坐标
-         * @type {number}
-         */
-        this.x = Math.floor(Math.random() * 5);
-        /**
-         * player初始位置的y坐标
-         * @type {number}
-         */
-        this.y = maxY;
+        let fp = 'images/char-boy.png';
+        let x = Math.floor(Math.random() * 5);
+        let y = maxY
+        super(fp, x, y);
         /**
          * player的x位移
          * @type {number}
@@ -112,6 +128,11 @@ class Player {
          * @type {string}
          */
         this.status = 'alive';
+        /**
+         * player获得分数
+         * @type {number}
+         */
+        this.score = 0;
     }
 
     /**
@@ -171,7 +192,7 @@ class Player {
      * player实例方法，绘制player
      */
     render() {
-        ctx.drawImage(Resources.get(this.sprite), this.x * 101, this.y * 83);
+        super.render();
     }
 
     /**
@@ -182,15 +203,95 @@ class Player {
     reset(maxX, maxY) {
         this.x = Math.floor(Math.random() * (maxX + 1));
         this.y = maxY;
+        this.dx = this.dy = 0;
+        this.status = 'alive';
+        this.score = 0;
     }
 }
 
+/**
+ * Gem类
+ * player碰到宝石可以获得分数：蓝色1分，绿色2分，橙色3分
+ */
+class Gem extends Item {
+    /**
+     * Gem构造函数
+     * @constructor
+     * @param {number} type - 宝石类型,1蓝色,2绿色,3橙色
+     * @param {number} x - 宝石初始位置x坐标
+     * @param {number} y - 宝石初始位置y坐标
+     */
+    constructor(type, x, y) {
+        let fp;
+        switch (type) {
+            case 1:
+                fp = 'images/Gem Blue.png';
+                break;
+            case 2:
+                fp = 'images/Gem Green.png';
+                break;
+            case 3:
+                fp = 'images/Gem Orange.png';
+                break;
+            default:
+                break;
+        }
+        super(fp, x, y);
+        this.type = type;
+        /**
+         * gem属性，表示gem是否已经被player收集
+         * @type {boolean}
+         */
+        this.isCollected = false;
+    }
+
+    /**
+     * gem实例方法，碰撞检测
+     * @param {Player} player - player实例
+     */
+    checkCollision(player) {
+        let isLeftIn = ((this.x <= player.x && player.x < this.x + 1) && (this.y <= player.y && player.y < this.y + 1));
+        let isRightIn = ((player.x <= this.x && this.x < player.x + 1) && (player.y <= this.y && this.y < player.y + 1));
+        if (!this.isCollected && (player.status === 'alive') && (isLeftIn || isRightIn)) {
+            player.score += this.type;
+            this.isCollected = true; //  销毁宝石
+        }
+
+    }
+
+    /**
+     * gem实例方法，update
+     */
+    update() {}
+
+    /**
+     * gem实例方法，当gem的type不为0时渲染gem
+     */
+    render() {
+        if (!this.isCollected) {
+            super.render();
+        }
+    }
+
+    /**
+     * gem实例方法，重置gem
+     */
+    reset() {
+        this.x = Math.floor(Math.random() * 5);
+        this.isCollected = false;
+    }
+
+}
+
 const allEnemies = [];
-for (let i = 0; i < 9; i++) {
+const allGems = [];
+for (let i = 0; i < 7; i++) {
     let enemy;
     if (i < 3) {
         //保证每行石头上至少有一只虫子
-        enemy = new Enemy(i + 1);
+        enemy = new Enemy(undefined, i + 1);
+        let x = Math.floor(Math.random() * 5);
+        allGems.push(new Gem(i + 1, x, 3 - i));
     } else {
         //多余的虫子，可用于调节难度
         enemy = new Enemy();
@@ -210,9 +311,14 @@ document.addEventListener('keyup', function(e) {
         39: 'right',
         40: 'down'
     };
-    // 回车键删除游戏结果弹框并恢复player
+    // 回车键重置游戏
     if (e.key === 'Enter' && player.status !== 'alive') {
-        player.status = 'alive';
+        allEnemies.forEach(function(enemy) {
+            enemy.reset();
+        });
+        allGems.forEach(function(gem) {
+            gem.reset();
+        });
         player.reset(4, 5);
     }
 
